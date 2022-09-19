@@ -2,6 +2,7 @@ import sys
 import logging
 import argparse
 import time
+import json
 from ffmpeg import Ffmpeg
 
 def main(args):
@@ -58,6 +59,17 @@ def process(logger, ffmpeg, workingDir):
 
         ffmpeg.concat(_indexFilePath, f"\"{workingDir}\\output.mp4\"")
         logger.info(f"Processing done. Runtime: {ffmpeg.secondsToTimecode(time.time() - _startTime, False)}.")
+
+def segmentVideo(JsonFillePath):
+    wordSegments = []
+    videoData = json.load(open(JsonFillePath))
+    
+    for word in videoData["Words"]:
+        wordStatistics = (word["Offset"], word["Duration"], word["Word"])
+        wordSegments.append(wordStatistics)
+        
+    return wordSegments
+    
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
