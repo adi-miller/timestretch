@@ -44,9 +44,11 @@ def process(logger, ffmpeg, workingDir):
     _indexFilename = "index.txt"
     _indexFilePath = f"{workingDir}\\{_indexFilename}"
 
+    # words = segmentVideo()
+    words = [(0, 20, "word"), (25, 50, "longer")]
+
     with open(_indexFilePath, "w") as indexFile:
         indexFile.write(f"file '{_outputFilename}'\n")
-        words = [(0, 20, "word"), (25, 50, "longer")]
         for wordTuple in words:
             _start = wordTuple[0]
             _dur = wordTuple[1]
