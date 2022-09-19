@@ -3,35 +3,32 @@ import time
 from asyncio.log import logger
 
 class Ffmpeg:
-    _gaussFactor = 12000
-    
-    def __init__(self, path, logger, logLevel, ffmpegLogLevel):
-        self.ffmpeg_path = path + f" -y -loglevel {ffmpegLogLevel}"
+    def __init__(self, path, logger):
+        self.ffmpeg_path = path + f" -y"
         self.logger = logger
 
-    def trim(self, cfg, workingDir, startTime, endTime, word, output):
-        start_time = time.time()
-        length = endTime - startTime
-        vidFile = f"\"{workingDir}\\{cfg.videoFile}\""
+    def extractAudio(self, logger, inputFile, outputFile):
+        command = f"{self.ffmpeg_path} -i {inputFile} -ss 0 -t 30 -acodec pcm_s16le -ac 1 -ar 16000 {outputFile}"
+        self.logger.debug(command)
+        res = os.system(command)
+        if (res != 0):
+            raise Exception(res)
 
+    def trim(self, vidFile, startTime, duration, word, output):
         self.logger.info(f"Rendering section {output}...")
-        self.logger.info(f" - Trimming from {self.secondsToTimecode(startTime, False)} to {self.secondsToTimecode(endTime, False)}")
-        command = f"{self.ffmpeg_path} -ss {startTime} -to {endTime} -i {vidFile} "
-        command = command + f" -filter_complex \"drawtext=timecode=\'{self.secondsToTimecode(startTime)}\:000':r=15.97:x=w-tw-10:y=h-th-10:fontsize=24:fontcolor=white"
-
-        command = command + f", drawtext=text='{word}':font=Calibri:box=1:boxborderw=12:boxcolor=#DD4F1B:x=44:'y=822':fontsize=64:fontcolor=white"
+        command = f"{self.ffmpeg_path} -ss {startTime} -i \"{vidFile}\" -t {duration} "
+        command = command + f" -filter_complex \"drawtext=text='{word}':font=Calibri:box=1:boxborderw=12:boxcolor=white:x=44:'y=44':fontsize=128:fontcolor=black"
 
         # command = command + f" ,setpts=0.5*PTS;atempo=2.0"
 
-        command = command + f"\" -pix_fmt yuv420p \"{workingDir}\\{output}\""
+        command = command + f"\" -pix_fmt yuv420p \"{output}\""
         self.logger.debug(command)
         os.system(command)
-        self.logger.info(f"Section rendering done. Runtime: {self.secondsToTimecode(time.time() - start_time, False)}.")
 
         return output
 
-    def concat(self, indexFilename, metadataFilename, output):
-        command = f"{self.ffmpeg_path} -f concat -safe 0 -i \"{indexFilename}\" -i \"{metadataFilename}\" -af loudnorm -map_metadata 1 -c:v copy {output}"
+    def concat(self, indexFilename, output):
+        command = f"{self.ffmpeg_path} -f concat -safe 0 -i \"{indexFilename}\" -c:v copy {output}"
         self.logger.info(f"Rendering {output}...")
         self.logger.info(f" - Normalizing audio levels")
         self.logger.debug(command)

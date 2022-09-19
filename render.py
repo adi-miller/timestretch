@@ -4,27 +4,33 @@ import argparse
 import time
 import json
 from ffmpeg import Ffmpeg
+from speech import SpeechCli
 
 def main(args):
     parser = argparse.ArgumentParser(description='Time Stretch')
 
     parser.add_argument("videoFile", action="store", help="Full path and filename for original video")
     parser.add_argument("--ffmpegPath", "-f", default="ffmpeg.exe", help="Full path for ffmpeg runtime")
+    parser.add_argument("--speechKey", "-k", action="store", help="Key to Speech services")
+    
 
     options = parser.parse_args()
     if options.videoFile is None:
         parser.print_help()
     
-    logger = getLogger(options.logLevel)
+    logger = getLogger(logLevel=logging.DEBUG)
 
     _ffmpegPath = "ffmpeg.exe"
     if options.ffmpegPath is not None:
         _ffmpegPath = f"{options.ffmpegPath}\\{_ffmpegPath}"
-    ffmpeg = Ffmpeg(_ffmpegPath, logger, options.logLevel, options.ffmpegLogLevel)
+    ffmpeg = Ffmpeg(_ffmpegPath, logger)
 
     workingDir = '\\'.join(options.videoFile.split('\\')[0:-1])
-
-    process(logger, ffmpeg, workingDir)
+    if workingDir == "":
+        workingDir = "."
+    audFile = createAudioOnlyFile(logger, options.videoFile, ffmpeg, workingDir)
+    wordLevelTimestamp = createWordLevelTimestamp(logger, options.speechKey, audFile)
+    process(logger, ffmpeg, workingDir, options.videoFile, wordLevelTimestamp)
 
 def getLogger(logLevel):
     formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
@@ -38,27 +44,37 @@ def getLogger(logLevel):
     logger.addHandler(screen_handler)
     return logger
 
-def process(logger, ffmpeg, workingDir):
-    _dur = 0
+def createWordLevelTimestamp(logger, key, audFile):
+    speech = SpeechCli(logger)
+    return speech.runSpx(key, audFile)
+
+def createAudioOnlyFile(logger, videoFile, ffmpeg, workingDir):
+    vidFile = f"\"{workingDir}\\{videoFile}\""
+    audFile = vidFile.replace(".mp4", ".wav")
+
+    ffmpeg.extractAudio(logger, vidFile, audFile)
+    return audFile
+
+def process(logger, ffmpeg, workingDir, vidFile, words):
     _startTime = time.time()
 
     _indexFilename = "index.txt"
     _indexFilePath = f"{workingDir}\\{_indexFilename}"
 
-    # words = segmentVideo()
-    words = [(0, 20, "word"), (25, 50, "longer")]
-
+    index = 0
     with open(_indexFilePath, "w") as indexFile:
-        indexFile.write(f"file '{_outputFilename}'\n")
+        words = words[:80]
         for wordTuple in words:
-            _start = wordTuple[0]
-            _dur = wordTuple[1]
-            _word = wordTuple[2]
-            _outputFilename = ffmpeg.trim(workingDir, _start, _dur, _word, _outputFilename)
-            break
+            _word = wordTuple[0]
+            _start = wordTuple[1]
+            _dur = wordTuple[2]
+            _outputFilename = f"wordFile{index:05d}.mp4"
+            index = index + 1
+            _outputFilename = ffmpeg.trim(vidFile, _start, _dur, _word, _outputFilename)
+            indexFile.write(f"file '{_outputFilename}'\n")
 
-        ffmpeg.concat(_indexFilePath, f"\"{workingDir}\\output.mp4\"")
-        logger.info(f"Processing done. Runtime: {ffmpeg.secondsToTimecode(time.time() - _startTime, False)}.")
+    ffmpeg.concat(_indexFilePath, f"\"{workingDir}\\output.mp4\"")
+    logger.info(f"Processing done. Runtime: {ffmpeg.secondsToTimecode(time.time() - _startTime, False)}.")
 
 def segmentVideo(JsonFillePath):
     wordSegments = []
