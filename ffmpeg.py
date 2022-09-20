@@ -19,12 +19,25 @@ class Ffmpeg:
         command = f"{self.ffmpeg_path} -ss {startTime} -i \"{vidFile}\" -t {duration} "
         command = command + f" -filter_complex \"drawtext=text=\\'{text}\\':font=Calibri:box=1:boxborderw=12:boxcolor=white:x=44:'y=44':fontsize=128:fontcolor=black"
 
-        command = command + f" ,setpts={speed}*PTS;atempo={1/speed}"
+        command = command + f" ,setpts={1/speed}*PTS;atempo={speed}"
 
         command = command + f"\" -pix_fmt yuv420p \"{output}\""
         self.logger.debug(command)
         os.system(command)
 
+        return output
+
+    def processWithFilterFile(self, vidFile, output, filterFile):
+        """
+        Runs the ffmpeg command on the input file with the filter file and outputs to the output file
+        """
+        self.logger.info(
+            f"Processing {vidFile} with complex filters file {filterFile}...")
+
+        command = f"{self.ffmpeg_path} -i \"{vidFile}\" -filter_complex_script \"{filterFile}\""
+        command += f" -preset superfast -profile:v baseline {output}"
+        self.logger.debug(command)
+        os.system(command)
         return output
 
     def concat(self, indexFilename, output):
