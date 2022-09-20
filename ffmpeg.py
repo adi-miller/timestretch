@@ -14,12 +14,12 @@ class Ffmpeg:
         if (res != 0):
             raise Exception(res)
 
-    def trim(self, vidFile, startTime, duration, word, output):
+    def trim(self, vidFile, startTime, duration, speed, text, output):
         self.logger.info(f"Rendering section {output}...")
         command = f"{self.ffmpeg_path} -ss {startTime} -i \"{vidFile}\" -t {duration} "
-        command = command + f" -filter_complex \"drawtext=text='{word}':font=Calibri:box=1:boxborderw=12:boxcolor=white:x=44:'y=44':fontsize=128:fontcolor=black"
+        command = command + f" -filter_complex \"drawtext=text=\\'{text}\\':font=Calibri:box=1:boxborderw=12:boxcolor=white:x=44:'y=44':fontsize=128:fontcolor=black"
 
-        # command = command + f" ,setpts=0.5*PTS;atempo=2.0"
+        command = command + f" ,setpts={speed}*PTS;atempo={1/speed}"
 
         command = command + f"\" -pix_fmt yuv420p \"{output}\""
         self.logger.debug(command)
