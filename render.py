@@ -141,12 +141,11 @@ def process(logger, ffmpeg, workingDir, vidFile, words):
             _word = wordTuple[0]
             _start = wordTuple[1]
             _dur = wordTuple[2]
-            _speed = wordTuple[3] if len(wordTuple) == 4 else 1.0
             _outputFilename = f"wordFile{index:05d}.mp4"
             index = index + 1
-            _text = f"{_word} dur: {_dur} speed: {_speed} cps: {round(_dur/len(_word), 2)}"
+            _text = f"{_word} dur: {_dur} cps: {round(_dur/len(_word), 2)}"
             _outputFilename = ffmpeg.trim(
-                vidFile, _start, _dur, _speed, _text, _outputFilename)
+                vidFile, _start, _dur, 1.0, _text, _outputFilename)
             indexFile.write(f"file '{_outputFilename}'\n")
 
     ffmpeg.concat(_indexFilePath, f"\"{workingDir}\\output.mp4\"")
