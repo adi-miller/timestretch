@@ -31,8 +31,10 @@ def main(args):
     workingDir = '\\'.join(options.videoFile.split('\\')[0:-1])
     if workingDir == "":
         workingDir = "."
-    audFile = createAudioOnlyFile(logger, options.videoFile, ffmpeg, workingDir)
-    wordLevelTimestamp = createWordLevelTimestamp(logger, options.speechKey, audFile)
+    audFile = createAudioOnlyFile(
+        logger, options.videoFile, ffmpeg, workingDir)
+    wordLevelTimestamp = createWordLevelTimestamp(
+        logger, options.speechKey, audFile)
     # Generate the synthesized audio file from the sentences in the original audio file
     # speech = SpeechCli(logger)
     # SpeechCli(logger).runSpxSynthesized(options.speechKey, sentences, audFileSynthesized)
@@ -44,7 +46,8 @@ def main(args):
 
 
 def getLogger(logLevel):
-    formatter = logging.Formatter(fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+    formatter = logging.Formatter(
+        fmt='%(asctime)s %(levelname)-8s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
     handler = logging.FileHandler('log.txt', mode='w')
     handler.setFormatter(formatter)
     screen_handler = logging.StreamHandler(stream=sys.stdout)
@@ -147,18 +150,20 @@ def process(logger, ffmpeg, workingDir, vidFile, words):
             indexFile.write(f"file '{_outputFilename}'\n")
 
     ffmpeg.concat(_indexFilePath, f"\"{workingDir}\\output.mp4\"")
-    logger.info(f"Processing done. Runtime: {ffmpeg.secondsToTimecode(time.time() - _startTime, False)}.")
+    logger.info(
+        f"Processing done. Runtime: {ffmpeg.secondsToTimecode(time.time() - _startTime, False)}.")
+
 
 def segmentVideo(JsonFillePath):
     wordSegments = []
     videoData = json.load(open(JsonFillePath))
-    
+
     for word in videoData["Words"]:
         wordStatistics = (word["Offset"], word["Duration"], word["Word"])
         wordSegments.append(wordStatistics)
-        
+
     return wordSegments
-    
+
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
