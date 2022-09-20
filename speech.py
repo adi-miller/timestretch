@@ -26,7 +26,8 @@ class SpeechCli:
                         jsonLine = json.loads(line)
                         if jsonLine["DisplayText"] != "":
                             print(jsonLine["DisplayText"])
-                            jsonWords = jsonLine["NBest"][0]["Words"]
+                            maxConfidenceIndex = self.getMaxConfidenceIndex(jsonLine)
+                            jsonWords = jsonLine["NBest"][maxConfidenceIndex]["Words"]
                             for jsonWord in jsonWords:
                                 words.append((jsonWord["Word"], jsonWord["Offset"]/10000000, (jsonWord["Duration"]/10000000)))
                             continue
@@ -35,3 +36,15 @@ class SpeechCli:
                         pass
         
         return words
+    
+    def getMaxConfidenceIndex(jsonLine):
+        maxConfidence = 0
+        maxConfidenceIndex = 0
+        
+        for i in range(len(jsonLine["NBest"])): 
+            newConfidence = jsonLine["NBest"][i]["Confidence"]
+            if(newConfidence > maxConfidence):
+                maxConfidence = newConfidence
+                maxConfidenceIndex = i       
+                
+        return maxConfidenceIndex
