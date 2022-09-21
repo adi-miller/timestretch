@@ -3,9 +3,11 @@ import logging
 import argparse
 import time
 import json
+from adimi import AdimiIMpl
 from ffmpeg import Ffmpeg
 from speech import SpeechCli
 import uuid
+from utils import createAudioOnlyFile, createWordLevelTimestamp
 
 
 def main(args):
@@ -17,6 +19,8 @@ def main(args):
                         help="Full path for ffmpeg runtime")
     parser.add_argument("--speechKey", "-k", action="store",
                         help="Key to Speech services")
+    parser.add_argument("--method", "-m", default="default",
+                        help="Which rednering method to use")
 
     options = parser.parse_args()
     if options.videoFile is None:
@@ -32,11 +36,17 @@ def main(args):
     workingDir = '\\'.join(options.videoFile.split('\\')[0:-1])
     if workingDir == "":
         workingDir = "."
+
     audFile = createAudioOnlyFile(
         logger, options.videoFile, ffmpeg, workingDir)
     outputJsonOriginal = str(uuid.uuid4()) + ".json"
     wordLevelTimestamp = createWordLevelTimestamp(
-        logger, options.speechKey, audFile, outputJsonOriginal)
+        logger, options.speechKey, audFile)
+
+    if options.method == "adimi":
+        impl = AdimiIMpl("", logger, ffmpeg)
+        impl.process(workingDir, options.videoFile, wordLevelTimestamp)
+        return
 
     # Generate the synthesized audio file from the sentences in the original audio file
     speech = SpeechCli(logger)
@@ -47,7 +57,6 @@ def main(args):
         options.speechKey, sentencesJsonFile, synthesizedFile)
     synthesizedWordLevelTimestamp = createWordLevelTimestamp(
         logger, options.speechKey, synthesizedFile, str(uuid.uuid4()) + ".json")
-    # process(logger, ffmpeg, workingDir, options.videoFile, wordLevelTimestamp)
     processWithSpeedRatios(logger, ffmpeg, workingDir, options.videoFile,
                            wordLevelTimestamp, synthesizedWordLevelTimestamp)
 
@@ -134,31 +143,6 @@ def processWithSpeedRatios(logger, ffmpeg, workingDir, vidFile, wordsOriginal, w
     createFiltersFile(f"{workingDir}\\filter.txt", wordsWithSpeedRatio)
     ffmpeg.processWithFilterFile(
         f"\"{workingDir}\\{vidFile}\"", f"\"{workingDir}\\{vidFile.replace('.mp4', '_speed_ratio.mp4')}\"", f"\"{workingDir}\\filter.txt\"")
-    logger.info(
-        f"Processing done. Runtime: {ffmpeg.secondsToTimecode(time.time() - _startTime, False)}.")
-
-
-def process(logger, ffmpeg, workingDir, vidFile, words):
-    _startTime = time.time()
-
-    _indexFilename = "index.txt"
-    _indexFilePath = f"{workingDir}\\{_indexFilename}"
-
-    index = 0
-    with open(_indexFilePath, "w") as indexFile:
-        words = words[:80]
-        for wordTuple in words:
-            _word = wordTuple[0]
-            _start = wordTuple[1]
-            _dur = wordTuple[2]
-            _outputFilename = f"wordFile{index:05d}.mp4"
-            index = index + 1
-            _text = f"{_word} dur: {_dur} cps: {round(_dur/len(_word), 2)}"
-            _outputFilename = ffmpeg.trim(
-                vidFile, _start, _dur, 1.0, _text, _outputFilename)
-            indexFile.write(f"file '{_outputFilename}'\n")
-
-    ffmpeg.concat(_indexFilePath, f"\"{workingDir}\\output.mp4\"")
     logger.info(
         f"Processing done. Runtime: {ffmpeg.secondsToTimecode(time.time() - _startTime, False)}.")
 
