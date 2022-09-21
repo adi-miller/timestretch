@@ -2,13 +2,16 @@ import os
 import time
 from asyncio.log import logger
 
+
 class Ffmpeg:
     def __init__(self, path, logger):
         self.ffmpeg_path = path + f" -y"
         self.logger = logger
 
     def extractAudio(self, logger, inputFile, outputFile):
-        command = f"{self.ffmpeg_path} -i {inputFile} -ss 0 -t 30 -acodec pcm_s16le -ac 1 -ar 16000 {outputFile}"
+        # additionalSettings = "-ss 0 -t 30 -acodec pcm_s16le -ac 1 -ar 16000"
+        additionalSettings = ""
+        command = f"{self.ffmpeg_path} -i {inputFile} {additionalSettings} {outputFile}"
         self.logger.debug(command)
         res = os.system(command)
         if (res != 0):
@@ -17,7 +20,8 @@ class Ffmpeg:
     def trim(self, vidFile, startTime, duration, speed, text, output):
         self.logger.info(f"Rendering section {output}...")
         command = f"{self.ffmpeg_path} -ss {startTime} -i \"{vidFile}\" -t {duration} "
-        command = command + f" -filter_complex \"drawtext=text=\\'{text}\\':font=Calibri:box=1:boxborderw=12:boxcolor=white:x=44:'y=44':fontsize=128:fontcolor=black"
+        command = command + \
+            f" -filter_complex \"drawtext=text=\\'{text}\\':font=Calibri:box=1:boxborderw=12:boxcolor=white:x=44:'y=44':fontsize=128:fontcolor=black"
 
         command = command + f" ,setpts={1/speed}*PTS;atempo={speed}"
 
@@ -52,7 +56,7 @@ class Ffmpeg:
         hours, minutes, seconds = timecode.split(':')
         return int(hours) * 3600 + int(minutes) * 60 + float(seconds)
 
-    def secondsToTimecode(self, seconds, escaped = True):
+    def secondsToTimecode(self, seconds, escaped=True):
         hours = int(seconds / 3600)
         minutes = int(seconds / 60) % 60
         seconds = round(seconds % 60, 2)
@@ -60,7 +64,7 @@ class Ffmpeg:
             return f"{hours:>02d}\:{minutes:>02d}\:{seconds:>02d}"
         else:
             return f"{hours:>02d}:{minutes:>02d}:{seconds:>02.2f}"
-    
+
     def wordWrap(self, sentence, length):
         words = sentence.split(" ")
         _sentence = ""

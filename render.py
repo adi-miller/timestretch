@@ -5,6 +5,7 @@ import time
 import json
 from ffmpeg import Ffmpeg
 from speech import SpeechCli
+import uuid
 
 
 def main(args):
@@ -33,16 +34,22 @@ def main(args):
         workingDir = "."
     audFile = createAudioOnlyFile(
         logger, options.videoFile, ffmpeg, workingDir)
+    outputJsonOriginal = str(uuid.uuid4()) + ".json"
     wordLevelTimestamp = createWordLevelTimestamp(
-        logger, options.speechKey, audFile)
+        logger, options.speechKey, audFile, outputJsonOriginal)
+
     # Generate the synthesized audio file from the sentences in the original audio file
-    # speech = SpeechCli(logger)
-    # SpeechCli(logger).runSpxSynthesized(options.speechKey, sentences, audFileSynthesized)
-    # synthesizedWordLevelTimestamp = createWordLevelTimestamp(
-    #     logger, options.speechKey, audFileSynthesized)
-    process(logger, ffmpeg, workingDir, options.videoFile, wordLevelTimestamp)
-    # processWithWords(logger, ffmpeg, workingDir, options.videoFile,
-    #                  wordLevelTimestamp, synthesizedWordLevelTimestamp)
+    speech = SpeechCli(logger)
+    sentencesJsonFile = str(uuid.uuid4()) + ".json"
+    synthesizedFile = str(uuid.uuid4()) + ".wav"
+    speech.extractSentencesOnly(outputJsonOriginal, sentencesJsonFile)
+    speech.runSpxSynthesized(
+        options.speechKey, sentencesJsonFile, synthesizedFile)
+    synthesizedWordLevelTimestamp = createWordLevelTimestamp(
+        logger, options.speechKey, synthesizedFile, str(uuid.uuid4()) + ".json")
+    # process(logger, ffmpeg, workingDir, options.videoFile, wordLevelTimestamp)
+    processWithSpeedRatios(logger, ffmpeg, workingDir, options.videoFile,
+                           wordLevelTimestamp, synthesizedWordLevelTimestamp)
 
 
 def getLogger(logLevel):
@@ -59,9 +66,9 @@ def getLogger(logLevel):
     return logger
 
 
-def createWordLevelTimestamp(logger, key, audFile):
+def createWordLevelTimestamp(logger, key, audFile, outputFile):
     speech = SpeechCli(logger)
-    return speech.runSpxRecognize(key, audFile)
+    return speech.runSpxRecognize(key, audFile, outputFile)
 
 
 def createAudioOnlyFile(logger, videoFile, ffmpeg, workingDir):
@@ -102,6 +109,9 @@ def compareAndExtractWordSpeeds(logger, wordsOriginal, wordsSynthesized):
     # This should have a better algorithm to match words if the count is different
     if (len(wordsOriginal) != len(wordsSynthesized)):
         logger.error("Word count mismatch")
+        for index in range(len(wordsOriginal)):
+            logger.error(
+                f"Original: {wordsOriginal[index]}, Synthesized: {wordsSynthesized[index]}")
         raise Exception("Word counts do not match")
 
     wordsWithSpeedRatio = []
@@ -117,7 +127,7 @@ def compareAndExtractWordSpeeds(logger, wordsOriginal, wordsSynthesized):
     return wordsWithSpeedRatio
 
 
-def processWithWords(logger, ffmpeg, workingDir, vidFile, wordsOriginal, wordsSynthesized):
+def processWithSpeedRatios(logger, ffmpeg, workingDir, vidFile, wordsOriginal, wordsSynthesized):
     _startTime = time.time()
     wordsWithSpeedRatio = compareAndExtractWordSpeeds(
         logger, wordsOriginal, wordsSynthesized)
