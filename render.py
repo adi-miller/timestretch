@@ -3,6 +3,7 @@ import logging
 import argparse
 import time
 import json
+from adimi import AdimiIMpl
 from ffmpeg import Ffmpeg
 from speech import SpeechCli
 
@@ -16,6 +17,8 @@ def main(args):
                         help="Full path for ffmpeg runtime")
     parser.add_argument("--speechKey", "-k", action="store",
                         help="Key to Speech services")
+    parser.add_argument("--method", "-m", default="default",
+                        help="Which rednering method to use")
 
     options = parser.parse_args()
     if options.videoFile is None:
@@ -31,6 +34,12 @@ def main(args):
     workingDir = '\\'.join(options.videoFile.split('\\')[0:-1])
     if workingDir == "":
         workingDir = "."
+
+    if options.method == "adimi":
+        adimi = AdimiIMpl("", logger)
+        adimi.process()
+        return
+
     audFile = createAudioOnlyFile(
         logger, options.videoFile, ffmpeg, workingDir)
     wordLevelTimestamp = createWordLevelTimestamp(
@@ -162,7 +171,6 @@ def segmentVideo(JsonFillePath):
         wordSegments.append(wordStatistics)
 
     return wordSegments
-
 
 if __name__ == '__main__':
     sys.exit(main(sys.argv))
