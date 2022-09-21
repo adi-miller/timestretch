@@ -41,7 +41,7 @@ def main(args):
         logger, options.videoFile, ffmpeg, workingDir)
     outputJsonOriginal = str(uuid.uuid4()) + ".json"
     wordLevelTimestamp = createWordLevelTimestamp(
-        logger, options.speechKey, audFile)
+        logger, options.speechKey, audFile, outputJsonOriginal)
 
     if options.method == "adimi":
         impl = AdimiIMpl("", logger, ffmpeg)
